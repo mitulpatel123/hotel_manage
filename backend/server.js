@@ -1,3 +1,5 @@
+// File: backend/server.js
+
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
@@ -192,7 +194,14 @@ app.post('/api/users', authenticateToken, isAdmin, async (req, res) => {
     await user.save();
     
     // Log the action
-    await createLog('create_user', `Created user: ${username} with role: ${role}`, req.user.id);
+    await createLog(
+      'create_user',
+      `Created user: ${username} with role: ${role}`,
+      req.user.id,
+      'user',
+      user._id,
+      null // no roomId
+    );
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -212,7 +221,14 @@ app.put('/api/users/:id/password', authenticateToken, isAdmin, async (req, res) 
     await User.findByIdAndUpdate(userId, { password: hashedPassword });
 
     // Log the action
-    await createLog('update_password', `Updated password for user ID: ${userId}`, req.user.id);
+    await createLog(
+      'update_password',
+      `Updated password for user ID: ${userId}`,
+      req.user.id,
+      'user',
+      userId,
+      null
+    );
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -234,7 +250,14 @@ app.put('/api/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
     await User.findByIdAndUpdate(userId, { role });
 
     // Log the action
-    await createLog('update_role', `Updated role to ${role} for user ID: ${userId}`, req.user.id);
+    await createLog(
+      'update_role',
+      `Updated role to ${role} for user ID: ${userId}`,
+      req.user.id,
+      'user',
+      userId,
+      null
+    );
 
     res.json({ message: 'Role updated successfully' });
   } catch (error) {
@@ -261,7 +284,14 @@ app.delete('/api/users/:id', authenticateToken, isAdmin, async (req, res) => {
     await User.findByIdAndDelete(userId);
 
     // Log the action
-    await createLog('delete_user', `Deleted user: ${user.username}`, req.user.id);
+    await createLog(
+      'delete_user',
+      `Deleted user: ${user.username}`,
+      req.user.id,
+      'user',
+      userId,
+      null
+    );
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
@@ -422,7 +452,14 @@ app.post('/api/rooms', authenticateToken, async (req, res) => {
     await room.save();
 
     // Log the action
-    await createLog('create_room', `Added room ${number}`, req.user.id);
+    await createLog(
+      'create_room',
+      `Added room ${number}`,
+      req.user.id,
+      'room',
+      room._id,
+      room._id
+    );
 
     res.status(201).json(room);
   } catch (error) {
@@ -454,7 +491,14 @@ app.put('/api/rooms/:id', authenticateToken, async (req, res) => {
     }
 
     // Log room update
-    await createLog('update_room', `Updated room ${number}`, req.user.id);
+    await createLog(
+      'update_room',
+      `Updated room ${number}`,
+      req.user.id,
+      'room',
+      room._id,
+      room._id
+    );
 
     res.json(room);
   } catch (error) {
@@ -472,7 +516,14 @@ app.delete('/api/rooms/:id', authenticateToken, async (req, res) => {
     }
 
     // Log room deletion
-    await createLog('delete_room', `Deleted room ${room.number}`, req.user.id);
+    await createLog(
+      'delete_room',
+      `Deleted room ${room.number}`,
+      req.user.id,
+      'room',
+      room._id,
+      room._id
+    );
 
     res.json({ message: 'Room deleted successfully' });
   } catch (error) {
@@ -562,7 +613,14 @@ app.delete('/api/rooms/:roomId/titles/:titleId', authenticateToken, async (req, 
     await IssueTitle.findByIdAndDelete(req.params.titleId);
 
     // Log the action
-    await createLog('delete_title', `Deleted title ${title.title} and its issues`, req.user.id);
+    await createLog(
+      'delete_title',
+      `Deleted title "${title.title}" and its issues`,
+      req.user.id,
+      'category',
+      req.params.titleId,
+      req.params.roomId
+    );
 
     res.json({ message: 'Title and associated issues deleted successfully' });
   } catch (error) {
@@ -613,7 +671,10 @@ app.post('/api/rooms/:roomId/titles/:titleId/issues', authenticateToken, async (
     await createLog(
       'create_issue',
       `Room ${room.number}: Created issue "${description}" under title "${issueTitle.title}"`,
-      req.user.id
+      req.user.id,
+      'issue',
+      issue._id,
+      room._id
     );
 
     res.status(201).json(issue);
@@ -648,7 +709,10 @@ app.put('/api/rooms/:roomId/titles/:titleId/issues/:issueId', authenticateToken,
     await createLog(
       'update_issue',
       `Room ${room.number}: Updated issue under "${issueTitle.title}" from "${currentIssue.description}" to "${description}"`,
-      req.user.id
+      req.user.id,
+      'issue',
+      updatedIssue._id,
+      room._id
     );
 
     res.json(updatedIssue);
@@ -677,7 +741,10 @@ app.delete('/api/rooms/:roomId/titles/:titleId/issues/:issueId', authenticateTok
     await createLog(
       'delete_issue',
       `Room ${room.number}: Deleted issue "${issue.description}" from title "${issueTitle.title}"`,
-      req.user.id
+      req.user.id,
+      'issue',
+      issue._id,
+      room._id
     );
 
     res.json({ message: 'Issue deleted successfully' });
@@ -690,43 +757,36 @@ app.delete('/api/rooms/:roomId/titles/:titleId/issues/:issueId', authenticateTok
 // Logs Routes
 app.use('/api/logs', logsRouter);
 
-// Helper function to create logs
-const createLog = async (action, details, userId) => {
+/**
+ * CREATE LOG HELPER
+ *
+ * Now accepts additional arguments:
+ *   - target: 'room' | 'category' | 'issue' | 'user'
+ *   - targetId: a mongoose ObjectId
+ *   - roomId: a mongoose ObjectId (or null)
+ */
+const createLog = async (action, details, userId, target, targetId, roomId) => {
   try {
     if (!userId) {
-      console.error('No userId provided for log creation');
+      // Silent fail or proper error handling without logging sensitive data
       return;
     }
 
-    // Map old action types to new simplified ones
-    const actionMap = {
-      'create_room': 'create',
-      'update_room': 'update',
-      'delete_room': 'delete',
-      'create_issue': 'create',
-      'update_issue': 'update',
-      'delete_issue': 'delete',
-      'create_user': 'create',
-      'update_role': 'update',
-      'update_password': 'update'
-    };
-
-    // Convert action to simplified version
-    const simplifiedAction = actionMap[action] || action;
-
     const log = new Log({
-      action: simplifiedAction,
+      action,
+      target,
+      targetId,
+      roomId,
+      userId,
       details,
-      userId: userId,
       createdAt: new Date()
     });
 
-    const savedLog = await log.save();
-    console.log('Log created:', savedLog);
-    return savedLog;
+    await log.save();
+    return log;
   } catch (error) {
-    console.error('Error creating log:', error);
-    throw error;
+    // Log only non-sensitive error information
+    console.error('Error creating log entry');
   }
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Filter } from 'lucide-react';
+import { ChevronLeft, Filter, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Log {
@@ -83,17 +83,27 @@ const LogBook: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="mr-3 p-1.5 hover:bg-gray-100 rounded-full"
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-md"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-6 w-6" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-900">System Logs</h1>
+              <div className="flex items-center gap-3 ml-2">
+                <img
+                  src="/images/logo.jpeg"
+                  alt="Hotel Logo"
+                  className="h-8 w-8 object-contain rounded-lg"
+                />
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="h-5 w-5 text-[#013c80]" />
+                  <h1 className="text-xl font-semibold text-gray-900">Log Book</h1>
+                </div>
+              </div>
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -103,7 +113,7 @@ const LogBook: React.FC = () => {
             </button>
           </div>
         </div>
-      </header>
+      </nav>
 
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {showFilters && (

@@ -1,5 +1,7 @@
+// File: src/pages/StaffRoomIssues.tsx
+
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit2, Trash2, Plus, X, Menu, LogOut, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DecryptedText from '../components/DecryptedText';
@@ -24,21 +26,32 @@ const StaffRoomIssues: React.FC = () => {
   const navigate = useNavigate();
   const [roomNumber, setRoomNumber] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // For creating new category/issue
   const [newCategory, setNewCategory] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [newIssue, setNewIssue] = useState('');
+
+  // For editing category/issue
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingIssue, setEditingIssue] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+
+  // UI toggles
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // For user info
   const [username, setUsername] = useState('');
+  
+  // For deleting category/issue confirmation modals
   const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [showDeleteIssueModal, setShowDeleteIssueModal] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<{categoryId: string, issue: Issue} | null>(null);
 
+  // Fetch data on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -94,6 +107,9 @@ const StaffRoomIssues: React.FC = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  ADD CATEGORY
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
 
@@ -108,11 +124,8 @@ const StaffRoomIssues: React.FC = () => {
       });
 
       if (response.ok) {
-        // Clear the input and close the modal first
         setNewCategory('');
         setShowCategoryModal(false);
-        
-        // Then fetch updated categories and show success message
         await fetchCategories();
         toast.success('Category added successfully');
       } else {
@@ -124,8 +137,14 @@ const StaffRoomIssues: React.FC = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  EDIT CATEGORY
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleEditCategory = async (categoryId: string) => {
-    if (!editText.trim()) return;
+    if (!editText.trim()) {
+      toast.error('Category title cannot be empty');
+      return;
+    }
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/titles/${categoryId}`, {
@@ -138,10 +157,10 @@ const StaffRoomIssues: React.FC = () => {
       });
 
       if (response.ok) {
+        toast.success('Category updated successfully');
         setEditingCategory(null);
         setEditText('');
         fetchCategories();
-        toast.success('Category updated successfully');
       } else {
         const error = await response.json();
         toast.error(error.message || 'Failed to update category');
@@ -151,6 +170,9 @@ const StaffRoomIssues: React.FC = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  DELETE CATEGORY
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleDeleteCategory = (category: Category) => {
     setCategoryToDelete(category);
     setShowDeleteCategoryModal(true);
@@ -158,7 +180,7 @@ const StaffRoomIssues: React.FC = () => {
 
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
-    
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/titles/${categoryToDelete._id}`,
@@ -170,19 +192,18 @@ const StaffRoomIssues: React.FC = () => {
         }
       );
 
-      // Even if we get a 500 error, if the category was deleted, we should update the UI
+      // Even if server returns 500, remove locally if it was actually deleted.
       if (response.status === 500) {
-        // Update UI since category was likely deleted despite the error
-        setCategories(prev => prev.filter(cat => cat._id !== categoryToDelete._id));
+        // Might have partially deleted, so update local
+        setCategories((prev) => prev.filter((cat) => cat._id !== categoryToDelete._id));
+        toast.success('Category deleted, but there was a server warning');
         setShowDeleteCategoryModal(false);
         setCategoryToDelete(null);
-        // Show a warning instead of an error
-        toast.success('Category deleted, but there was a server warning');
         return;
       }
 
       if (response.ok) {
-        setCategories(prev => prev.filter(cat => cat._id !== categoryToDelete._id));
+        setCategories((prev) => prev.filter((cat) => cat._id !== categoryToDelete._id));
         toast.success('Category deleted successfully');
         setShowDeleteCategoryModal(false);
         setCategoryToDelete(null);
@@ -191,35 +212,41 @@ const StaffRoomIssues: React.FC = () => {
         toast.error(error.message || 'Failed to delete category');
       }
     } catch (error) {
-      // If we get here, check if the category exists in our local state
-      const categoryStillExists = categories.some(cat => cat._id === categoryToDelete._id);
-      if (!categoryStillExists) {
-        // Category is gone from our state, so it was probably deleted
+      // If we see that category is already gone from our local state, proceed.
+      const stillExists = categories.some((c) => c._id === categoryToDelete._id);
+      if (!stillExists) {
+        toast.success('Category deleted successfully');
         setShowDeleteCategoryModal(false);
         setCategoryToDelete(null);
-        toast.success('Category deleted successfully');
       } else {
-        console.error('Delete error:', error);
         toast.error('Failed to delete category');
       }
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  ADD ISSUE
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleAddIssue = async () => {
     if (!selectedCategory || !newIssue.trim()) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/titles/${selectedCategory}/issues`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ description: newIssue })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/titles/${selectedCategory}/issues`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ description: newIssue })
+        }
+      );
 
       if (response.ok) {
         setNewIssue('');
+        setSelectedCategory('');
+        setShowIssueModal(false);
         fetchCategories();
         toast.success('Issue added successfully');
       } else {
@@ -231,6 +258,9 @@ const StaffRoomIssues: React.FC = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  EDIT ISSUE
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleEditIssue = async (categoryId: string, issueId: string) => {
     if (!editText.trim()) {
       toast.error('Issue description cannot be empty');
@@ -247,44 +277,23 @@ const StaffRoomIssues: React.FC = () => {
         body: JSON.stringify({ description: editText })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update issue');
+      if (response.ok) {
+        toast.success('Issue updated successfully');
+        setEditingIssue(null);
+        setEditText('');
+        fetchCategories();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to update issue');
       }
-
-      // Update the local state with the returned updated issue
-      setCategories(prevCategories => 
-        prevCategories.map(cat => {
-          if (cat._id === categoryId) {
-            return {
-              ...cat,
-              issues: cat.issues.map(issue => 
-                issue._id === issueId ? {
-                  ...issue,
-                  description: data.description,
-                  createdBy: data.createdBy
-                } : issue
-              )
-            };
-          }
-          return cat;
-        })
-      );
-
-      setEditingIssue(null);
-      setEditText('');
-      toast.success('Issue updated successfully');
-    } catch (error: any) {
-      console.error('Error updating issue:', error);
-      toast.error(error.message || 'Failed to update issue');
-    } finally {
-      // Always reset editing state
-      setEditingIssue(null);
-      setEditText('');
+    } catch (error) {
+      toast.error('Failed to update issue');
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  DELETE ISSUE
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleDeleteIssue = (categoryId: string, issue: Issue) => {
     setIssueToDelete({ categoryId, issue });
     setShowDeleteIssueModal(true);
@@ -292,7 +301,7 @@ const StaffRoomIssues: React.FC = () => {
 
   const confirmDeleteIssue = async () => {
     if (!issueToDelete) return;
-    
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/api/rooms/${roomId}/titles/${issueToDelete.categoryId}/issues/${issueToDelete.issue._id}`,
@@ -316,72 +325,32 @@ const StaffRoomIssues: React.FC = () => {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  //  RENDER
+  // ─────────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row py-4 sm:py-0 gap-4 sm:gap-0">
-            {/* Mobile: Two-line layout with menu on right */}
-            <div className="flex items-center justify-between w-full sm:hidden">
-              <div className="flex items-center gap-3">
-                <img 
-                  src="/images/logo.jpeg" 
-                  alt="Hotel Logo" 
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-md"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <div className="flex items-center gap-3 ml-2">
+                <img
+                  src="/images/logo.jpeg"
+                  alt="Hotel Logo"
                   className="h-8 w-8 object-contain rounded-lg"
                 />
-                <div className="flex flex-col">
-                  <DecryptedText
-                    text="Best Western News"
-                    animateOn="view"
-                    revealDirection="start"
-                    sequential
-                    speed={60}
-                    maxIterations={10}
-                    useOriginalCharsOnly
-                    className="text-lg font-semibold text-gray-900"
-                  />
-                  <DecryptedText
-                    text="Inn & Suites"
-                    animateOn="view"
-                    revealDirection="start"
-                    sequential
-                    speed={60}
-                    maxIterations={10}
-                    useOriginalCharsOnly
-                    className="text-base font-medium text-gray-700"
-                  />
-                </div>
+                <h1 className="text-xl font-semibold text-gray-900">Room {roomNumber} Issues</h1>
               </div>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-md text-[#013c80]"
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
             </div>
-
-            {/* Desktop: Original layout */}
-            <div className="hidden sm:flex items-center justify-center sm:justify-start">
-              <img 
-                src="/images/logo.jpeg" 
-                alt="Hotel Logo" 
-                className="h-12 w-auto object-contain rounded-xl"
-              />
-              <h1 className="ml-3 text-xl font-semibold text-gray-900">
-                <DecryptedText
-                  text="Best Western News Inn & Suites"
-                  animateOn="view"
-                  revealDirection="start"
-                  sequential
-                  speed={60}
-                  maxIterations={10}
-                  useOriginalCharsOnly
-                  className="text-gray-900 font-semibold"
-                />
-              </h1>
-            </div>
-
             {/* Desktop menu */}
             <div className="hidden sm:flex sm:items-center sm:ml-auto sm:space-x-4">
               <div className="flex items-center space-x-2 text-[#013c80]">
@@ -470,8 +439,38 @@ const StaffRoomIssues: React.FC = () => {
               className="bg-white shadow-sm rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md"
             >
               <div className="p-4 bg-[#013c80] bg-opacity-5 border-b border-[#013c80] border-opacity-10 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-[#013c80]">{category.title}</h3>
+                {/* Toggle between showing input (edit mode) vs. the category title */}
+                {editingCategory === category._id ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      className="border rounded px-2 py-1"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleEditCategory(category._id)}
+                      className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingCategory(null);
+                        setEditText('');
+                      }}
+                      className="px-2 py-1 bg-gray-200 text-sm rounded hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <h3 className="text-lg font-semibold text-[#013c80]">{category.title}</h3>
+                )}
+
                 <div className="flex items-center gap-2">
+                  {/* Edit button */}
                   <button
                     onClick={() => {
                       setEditingCategory(category._id);
@@ -482,6 +481,7 @@ const StaffRoomIssues: React.FC = () => {
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
+                  {/* Delete button */}
                   <button
                     onClick={() => handleDeleteCategory(category)}
                     className="text-red-600 hover:text-red-700 transition-colors p-1 rounded-md hover:bg-red-50"
@@ -491,6 +491,7 @@ const StaffRoomIssues: React.FC = () => {
                   </button>
                 </div>
               </div>
+              
               <div className="p-4 space-y-3">
                 {category.issues.map((issue) => (
                   <div
@@ -499,23 +500,56 @@ const StaffRoomIssues: React.FC = () => {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-gray-900 mb-2">{issue.description}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span className="inline-block h-2 w-2 rounded-full bg-[#013c80] opacity-50"></span>
-                          <p>
-                            Added by{' '}
-                            <span className="font-medium">
-                              {issue.createdBy?.username || 'Unknown User'}
-                            </span>{' '}
-                            on{' '}
-                            {new Date(issue.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </p>
-                        </div>
+                        {/* If we are editing THIS issue, show input field; otherwise show text */}
+                        {editingIssue === issue._id ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="text"
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="border rounded px-2 py-1 w-full"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditIssue(category._id, issue._id)}
+                                className="px-2 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingIssue(null);
+                                  setEditText('');
+                                }}
+                                className="px-2 py-1 bg-gray-200 text-sm rounded hover:bg-gray-300"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-gray-900 mb-2">{issue.description}</p>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span className="inline-block h-2 w-2 rounded-full bg-[#013c80] opacity-50"></span>
+                              <p>
+                                Added by{' '}
+                                <span className="font-medium">
+                                  {issue.createdBy?.username || 'Unknown User'}
+                                </span>{' '}
+                                on{' '}
+                                {new Date(issue.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
+
                       <div className="flex space-x-3">
                         <button
                           onClick={() => {
@@ -554,7 +588,9 @@ const StaffRoomIssues: React.FC = () => {
         </div>
       </main>
 
-      {/* Category Modal */}
+      {/* ──────────────────────────────────────────────────────────────────────────
+          ADD CATEGORY MODAL
+      ────────────────────────────────────────────────────────────────────────── */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
@@ -596,8 +632,10 @@ const StaffRoomIssues: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Category Confirmation Modal */}
-      {showDeleteCategoryModal && (
+      {/* ──────────────────────────────────────────────────────────────────────────
+          DELETE CATEGORY CONFIRMATION
+      ────────────────────────────────────────────────────────────────────────── */}
+      {showDeleteCategoryModal && categoryToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
             <div className="p-6">
@@ -607,7 +645,8 @@ const StaffRoomIssues: React.FC = () => {
               <div className="mt-4 text-center">
                 <h3 className="text-lg font-semibold text-gray-900">Delete Category</h3>
                 <p className="mt-2 text-sm text-gray-500">
-                  Are you sure you want to delete "{categoryToDelete?.title}"? All associated issues will be deleted.
+                  Are you sure you want to delete "{categoryToDelete.title}"?
+                  All associated issues will be deleted.
                 </p>
               </div>
               <div className="mt-6 flex justify-end space-x-4">
@@ -629,8 +668,10 @@ const StaffRoomIssues: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Issue Confirmation Modal */}
-      {showDeleteIssueModal && (
+      {/* ──────────────────────────────────────────────────────────────────────────
+          DELETE ISSUE CONFIRMATION
+      ────────────────────────────────────────────────────────────────────────── */}
+      {showDeleteIssueModal && issueToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
             <div className="p-6">
@@ -662,7 +703,9 @@ const StaffRoomIssues: React.FC = () => {
         </div>
       )}
 
-      {/* Issue Modal */}
+      {/* ──────────────────────────────────────────────────────────────────────────
+          ADD ISSUE MODAL
+      ────────────────────────────────────────────────────────────────────────── */}
       {showIssueModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all">
@@ -688,9 +731,9 @@ const StaffRoomIssues: React.FC = () => {
                   className="w-full px-4 py-2 border rounded-md focus:ring-[#013c80] focus:border-[#013c80]"
                 >
                   <option value="">Select category</option>
-                  {categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.title}
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.title}
                     </option>
                   ))}
                 </select>
@@ -719,7 +762,6 @@ const StaffRoomIssues: React.FC = () => {
                 <button
                   onClick={() => {
                     handleAddIssue();
-                    setShowIssueModal(false);
                   }}
                   disabled={!selectedCategory || !newIssue.trim()}
                   className="px-4 py-2 text-sm font-medium text-white bg-[#013c80] hover:bg-[#012b5c] rounded-md 

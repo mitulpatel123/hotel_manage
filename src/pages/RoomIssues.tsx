@@ -265,16 +265,23 @@ const RoomIssues = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <ChevronLeft className="h-5 w-5 mr-1" />
-            Back to Dashboard
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center text-gray-600 hover:text-gray-900"
+            >
+              <ChevronLeft className="h-5 w-5 mr-1" />
+              Back to Dashboard
+            </button>
+            <img
+              src="/images/logo.jpeg"
+              alt="Hotel Logo"
+              className="h-8 w-8 object-contain rounded-lg"
+            />
+          </div>
           <button
             onClick={() => setShowAddTitleModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="flex items-center px-4 py-2 bg-[#013c80] text-white rounded-md hover:bg-[#012b5c]"
           >
             <Plus className="h-5 w-5 mr-2" />
             Add Title
