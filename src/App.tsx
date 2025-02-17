@@ -10,11 +10,12 @@ import StaffRoomIssues from './pages/StaffRoomIssues';
 import UserManagement from './pages/UserManagement';
 import LogBook from './pages/LogBook';
 import ProtectedRoute from './components/ProtectedRoute';
+import Footer from './components/Footer';
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Toaster
           position="top-right"
           toastOptions={{
@@ -49,78 +50,81 @@ function App() {
             className: 'toast-compact',
           }}
         />
-        <Routes>
-          {/* Public route - PIN entry */}
-          <Route path="/" element={<PinScreen />} />
+        <div className="flex-1">
+          <Routes>
+            {/* Public route - PIN entry */}
+            <Route path="/" element={<PinScreen />} />
 
-          {/* Login route - requires PIN */}
-          <Route
-            path="/login"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={false}>
-                <Login />
-              </ProtectedRoute>
-            }
-          />
+            {/* Login route - requires PIN */}
+            <Route
+              path="/login"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={false}>
+                  <Login />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected routes requiring login */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={true}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected routes requiring login */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={true}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Admin-only routes */}
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={true} requireAdmin={true}>
-                <UserManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/logbook"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={true} requireAdmin={true}>
-                <LogBook />
-              </ProtectedRoute>
-            }
-          />
+            {/* Admin-only routes */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={true} requireAdmin={true}>
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/logbook"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={true} requireAdmin={true}>
+                  <LogBook />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/rooms/:roomId/issues"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={true}>
-                <StaffRoomIssues />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/rooms/:roomId/issues"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={true}>
+                  <StaffRoomIssues />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* View-only routes requiring PIN */}
-          <Route
-            path="/view/dashboard"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={false}>
-                <ViewDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/view/rooms/:roomId/issues"
-            element={
-              <ProtectedRoute requirePin={true} requireAuth={false}>
-                <ViewRoomIssues />
-              </ProtectedRoute>
-            }
-          />
+            {/* View-only routes requiring PIN */}
+            <Route
+              path="/view/dashboard"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={false}>
+                  <ViewDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/view/rooms/:roomId/issues"
+              element={
+                <ProtectedRoute requirePin={true} requireAuth={false}>
+                  <ViewRoomIssues />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+        <Footer />
       </div>
     </Router>
   );
