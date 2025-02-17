@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar, X, Filter } from 'lucide-react';
+import { ChevronLeft, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Log {
   _id: string;
   action: string;
+  details: string;
   performedBy: {
-    _id: string;
     username: string;
   };
-  details: string;
-  itemType: string;
   timestamp: string;
 }
 
@@ -26,21 +24,21 @@ const LogBook: React.FC = () => {
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate, actionFilter, userFilter]);
 
   const fetchLogs = async () => {
     try {
-      let url = `${import.meta.env.VITE_API_URL}/api/logs?`;
       const params = new URLSearchParams();
-      
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       if (actionFilter) params.append('action', actionFilter);
       if (userFilter) params.append('user', userFilter);
-      
-      const response = await fetch(`${url}${params.toString()}`, {
+
+      const url = `${import.meta.env.VITE_API_URL}/api/logs?${params.toString()}`;
+      const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -48,7 +46,7 @@ const LogBook: React.FC = () => {
         throw new Error('Failed to fetch logs');
       }
 
-      const data = await response.json();
+      const data: Log[] = await response.json();
       setLogs(data);
     } catch (error) {
       toast.error('Failed to fetch logs');
@@ -62,11 +60,12 @@ const LogBook: React.FC = () => {
     setUserFilter('');
   };
 
+  // Optionally map the raw action to more friendly text
   const formatAction = (action: string): string => {
     const actionMap: { [key: string]: string } = {
-      'create': 'Created',
-      'update': 'Updated',
-      'delete': 'Deleted'
+      create: 'Created',
+      update: 'Updated',
+      delete: 'Deleted'
     };
     return actionMap[action] || action;
   };
@@ -130,21 +129,13 @@ const LogBook: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Action Type</label>
-                <select
+                <input
+                  type="text"
                   value={actionFilter}
                   onChange={(e) => setActionFilter(e.target.value)}
+                  placeholder="e.g. create, update, delete"
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">All Actions</option>
-                  <option value="create_room">Create Room</option>
-                  <option value="delete_room">Delete Room</option>
-                  <option value="create_issue">Create Issue</option>
-                  <option value="update_issue">Update Issue</option>
-                  <option value="delete_issue">Delete Issue</option>
-                  <option value="create_user">Create User</option>
-                  <option value="update_role">Update Role</option>
-                  <option value="update_password">Update Password</option>
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">User</label>
@@ -174,6 +165,7 @@ const LogBook: React.FC = () => {
               <div key={log._id} className="p-4 hover:bg-gray-50">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
+                    {/* Simple avatar from first letter of username */}
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-blue-600 font-medium">
                         {log.performedBy.username.charAt(0).toUpperCase()}
@@ -186,7 +178,7 @@ const LogBook: React.FC = () => {
                         {log.performedBy.username}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {formatDate(log.timestamp)}
                       </p>
                     </div>
                     <p className="mt-1 text-sm text-gray-600">

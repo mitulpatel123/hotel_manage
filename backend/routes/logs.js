@@ -5,16 +5,18 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Get all logs (admin only)
+// GET /api/logs - Admin only
 router.get('/', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { action, user, startDate, endDate } = req.query;
-    
-    let query = {};
-    
-    // Apply filters
-    if (action) query.action = action;
+    const query = {};
+
+    // Optional filters:
+    if (action) {
+      query.action = action;
+    }
     if (user) {
+      // Filter by matching username
       const userRegex = new RegExp(user, 'i');
       const matchingUsers = await User.find({ username: userRegex }).select('_id');
       const userIds = matchingUsers.map(u => u._id);
@@ -30,35 +32,28 @@ router.get('/', authenticateToken, isAdmin, async (req, res) => {
       }
     }
 
-    console.log('Fetching logs with query:', JSON.stringify(query, null, 2));
-    
+    // Populate only the 'username' field from userId
     const logs = await Log.find(query)
       .sort({ createdAt: -1 })
       .populate('userId', 'username')
       .lean();
 
-    console.log('Found logs:', logs.length);
-    console.log('Sample log:', JSON.stringify(logs[0], null, 2));
-    
+    // Return only the fields we care about
     const formattedLogs = logs.map(log => ({
-      _id: log._id,
-      action: log.action,
-      details: log.details,
+      _id: log._id, // or remove if you don't want the log's own MongoDB ID
+      action: log.action, // e.g. "create" / "update" / "delete"
+      details: log.details, // e.g. "Deleted issue 'Broken A/C' from 'HVAC'"
       performedBy: {
-        _id: log.userId?._id || null,
         username: log.userId?.username || 'System'
       },
       timestamp: log.createdAt
     }));
-    
+
     res.json(formattedLogs);
   } catch (error) {
     console.error('Error fetching logs:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch logs',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ message: 'Failed to fetch logs' });
   }
 });
 
-export default router; 
+export default router;

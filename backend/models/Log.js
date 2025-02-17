@@ -6,6 +6,19 @@ const logSchema = new mongoose.Schema({
     required: true,
     enum: ['create', 'update', 'delete']
   },
+  target: {
+    type: String,
+    enum: ['room', 'category', 'issue'],
+    required: true
+  },
+  targetId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  roomId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -30,4 +43,6 @@ logSchema.post('save', function(doc) {
   });
 });
 
-export default mongoose.model('Log', logSchema);
+const Log = mongoose.model('Log', logSchema);
+
+export default Log;

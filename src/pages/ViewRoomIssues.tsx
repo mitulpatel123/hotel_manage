@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { ChevronLeft, LogOut } from 'lucide-react';
+import DecryptedText from '../components/DecryptedText';
+import TrueFocus from '../components/TrueFocus';
 
 interface Issue {
   _id: string;
@@ -16,6 +19,31 @@ interface IssueTitle {
   title: string;
   issues: Issue[];
 }
+
+// Add this CSS class to handle custom scrollbar
+const scrollbarStyles = `
+  .custom-scrollbar {
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #013c80 #f3f4f6;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #013c80;
+    border-radius: 3px;
+    opacity: 0.5;
+  }
+`;
 
 const ViewRoomIssues: React.FC = () => {
   const [titles, setTitles] = useState<IssueTitle[]>([]);
@@ -80,54 +108,125 @@ const ViewRoomIssues: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <button
-              onClick={() => navigate('/view/dashboard')}
-              className="text-blue-600 hover:text-blue-800 mb-4 flex items-center"
-            >
-              ← Back to Dashboard
-            </button>
-            <h1 className="text-2xl font-semibold">
-              Room {roomNumber} Issues (View Only)
-            </h1>
+      {/* Add style tag for custom scrollbar */}
+      <style>{scrollbarStyles}</style>
+      
+      {/* Navbar */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row py-4 sm:py-0 gap-4 sm:gap-0">
+            <div className="flex items-center justify-center sm:justify-start">
+              <img
+                src="/images/logo.jpeg"
+                alt="Hotel Logo"
+                className="h-12 w-auto object-contain rounded-xl"
+              />
+              <h1 className="ml-3 text-lg sm:text-xl font-semibold text-gray-900">
+                <DecryptedText
+                  text="Best Western News Inn & Suites"
+                  animateOn="view"
+                  revealDirection="start"
+                  sequential
+                  speed={60}
+                  maxIterations={10}
+                  useOriginalCharsOnly
+                  className="text-gray-900 font-semibold"
+                />
+              </h1>
+            </div>
+            <div className="flex items-center justify-center sm:justify-end sm:ml-auto gap-4">
+              <button
+                onClick={() => navigate('/login')}
+                className="inline-flex items-center px-4 py-2 bg-[#013c80] text-white text-sm rounded-md hover:bg-blue-700 transition duration-200"
+              >
+                Login for Edit Access
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('viewPin');
+                  navigate('/');
+                }}
+                className="inline-flex items-center px-3 py-2 text-sm text-[#013c80] hover:text-[#013c80]"
+              >
+                <LogOut className="h-4 w-4 sm:h-5 sm:w-5 mr-1 text-[#013c80]" />
+                Exit
+              </button>
+            </div>
           </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col items-start gap-3 mb-8">
           <button
-            onClick={() => navigate('/login')}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            onClick={() => navigate('/view/dashboard')}
+            className="inline-flex items-center text-[#013c80] hover:text-blue-700 transition-colors"
           >
-            Login for Edit Access
+            <ChevronLeft className="h-5 w-5" />
+            <span>Back to Dashboard</span>
           </button>
+          
+          <div className="flex items-center gap-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Room {roomNumber}
+            </h1>
+            <div className="text-sm text-gray-500 ml-2">
+              <TrueFocus
+                sentence="View Only"
+                manualMode={false}
+                blurAmount={5}
+                borderColor="#013c80"
+                animationDuration={0.5}
+                pauseBetweenAnimations={1}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="space-y-6">
           {titles.map((title) => (
             <div
               key={title._id}
-              className="bg-white shadow rounded-lg overflow-hidden"
+              className="bg-white shadow-sm rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md"
             >
-              <div className="p-4 bg-gray-50 border-b">
-                <h3 className="text-lg font-semibold">{title.title}</h3>
+              <div className="p-4 bg-[#013c80] bg-opacity-5 border-b border-[#013c80] border-opacity-10">
+                <h3 className="text-lg font-semibold text-[#013c80]">{title.title}</h3>
               </div>
-              <div className="p-4 space-y-3">
-                {title.issues?.map((issue) => (
-                  <div
-                    key={issue._id}
-                    className="group hover:bg-gray-50 p-2 rounded-md"
-                  >
-                    <div>
-                      <p className="text-gray-900">{issue.description}</p>
-                      <p className="text-sm text-gray-500">
-                        Added by {issue.createdBy?.username || 'Unknown User'} on{' '}
-                        {new Date(issue.createdAt).toLocaleDateString()}
-                      </p>
+              {/* Add custom-scrollbar class to the issues container */}
+              <div className="custom-scrollbar">
+                <div className="p-4 space-y-3">
+                  {title.issues?.map((issue) => (
+                    <div
+                      key={issue._id}
+                      className="group hover:bg-gray-50 p-3 rounded-md transition-colors duration-200 border border-transparent hover:border-gray-200"
+                    >
+                      <div>
+                        <p className="text-gray-900 mb-2">{issue.description}</p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <span className="inline-block h-2 w-2 rounded-full bg-[#013c80] opacity-50"></span>
+                          <p>
+                            Added by{' '}
+                            <span className="font-medium">
+                              {issue.createdBy?.username || 'Unknown User'}
+                            </span>{' '}
+                            on{' '}
+                            {new Date(issue.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {(!title.issues || title.issues.length === 0) && (
-                  <p className="text-gray-500 italic">No issues reported</p>
-                )}
+                  ))}
+                  {(!title.issues || title.issues.length === 0) && (
+                    <p className="text-gray-500 italic text-center py-4">
+                      No issues reported
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -137,7 +236,7 @@ const ViewRoomIssues: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };

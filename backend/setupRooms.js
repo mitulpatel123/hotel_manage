@@ -16,6 +16,11 @@ const initialRooms = [
   {
     number: '201',
     type: 'Suite'
+  },
+  // ADD THIS EXTRA ROOM FOR “OTHER”:
+  {
+    number: '999',    // some unique “room number”
+    type: 'Other'     // label it “Other,” or “Misc,” “Facility,” etc.
   }
 ];
 
